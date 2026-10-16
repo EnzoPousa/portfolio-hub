@@ -1,0 +1,114 @@
+1.Versão exata do motor SQLite retornada pela função sqlite_version().
+R: 3.46.1
+
+2.Todas as tabelas encontradas no catálogo sqlite_master.
+R:1	Investimentos
+  1	contas_bancarias
+  1	produtos_financeiros
+  1	sqlite_sequence
+  1	tinstance
+  1	tperson
+  2	Cartoes
+  3	Empréstimos
+
+3.Login, a hash SHA-1 original extraída da tabela tperson
+e a senha descriptografada (em texto claro) do usuário administrador (labsec).
+R: 1	admin : 56fd62af1fff4903459a265f02bbfff8b712e987
+   1	j_souza : b7a9681f61615b56e2d8f20afbf9dbedabd24df1
+   1	labsec : 11c2e8b8aa8e5d79acb1b80bcc85218c71d699f0
+   1	m_silva : 3decd49a6c6dce88c16a85b9a8e42b51aa36f1e2
+
+4. Dados da conta bancária e saldo associados ao usuário
+administrador recuperados na tabela contas_bancarias.
+R: Table: contas_bancarias
+[3 entries]
++----+-----------+----------------+-----------+-------------------------+--------------+
+| id | person_id | cpf            | saldo     | titular                 | numero_conta |
++----+-----------+----------------+-----------+-------------------------+--------------+
+| 1  | 3         | 012.345.678-90 | 15450.5   | Maria Silva             | 1001-9       |
+| 2  | 4         | 987.654.321-11 | 1250.0    | João Souza              | 2045-1       |
+| 3  | 1         | 000.000.000-00 | 1000000.0 | Conta Tesouraria Labsec | 0001-0       |
++----+-----------+----------------+-----------+-------------------------+--------------+
+
+5. Código Python corrigido das rotas /login e /produto
+no arquivo app.py, substituindo a interpolação de strings por Consultas Parametrizadas
+(Prepared Statements) utilizando o caractere marcador ?.
+R:@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    last_query = None
+    instance_results = None
+
+    instance_param = request.args.get("instance")
+
+    if instance_param:
+        query = "SELECT id, name FROM tinstance WHERE name = ?"
+
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute(query, (instance_param,))
+            instance_results = cursor.fetchall()
+            conn.close()
+
+        except sqlite3.Error as e:
+            error = f"Erro de sintaxe no SQL (GET instance): {e}"
+
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password_raw = request.form.get("password", "")
+
+        password_sha1 = sha1_hash(password_raw)
+
+        query = "SELECT * FROM tperson WHERE login = ? AND password = ?"
+
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute(query, (username, password_sha1))
+            user = cursor.fetchone()
+            conn.close()
+
+            if user:
+                session["username"] = user[1]
+                session["role"] = user[4]
+                return redirect(url_for("dashboard"))
+            else:
+                error = "Usuário ou senha incorretos."
+
+        except sqlite3.Error as e:
+            error = f"Erro de sintaxe no SQL (POST login): {e}"
+
+    return render_template_string(
+        LOGIN_TEMPLATE,
+        error=error,
+        last_query=last_query,
+        instance_results=instance_results
+    )
+
+
+@app.route("/produto", methods=["GET"])
+def produto():
+    error = None
+    results = None
+
+    nome_param = request.args.get("nome", "")
+
+    query = "SELECT id, name FROM produtos_financeiros WHERE name = ?"
+
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute(query, (nome_param,))
+        results = cursor.fetchall()
+        conn.close()
+
+    except sqlite3.Error as e:
+        error = f"Erro SQL: {e}"
+
+    return render_template_string(
+        PRODUTO_TEMPLATE,
+        results=results,
+        last_query=query,
+        error=error
+    )
