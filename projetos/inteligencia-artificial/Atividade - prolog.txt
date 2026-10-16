@@ -1,0 +1,54 @@
+a) A Jose e Maria são pais de Joao e Ana
+   progenitor(jose, joao).
+   progenitor(jose, ana).
+   progenitor(maria, joao).
+   progenitor(maria, ana).
+
+Ana é mãe de Helena e Joana
+   progenitor(ana, helena).
+   progenitor(ana, joana).
+
+João é pai de Mário
+   progenitor(joao, mario).
+
+Helena e Mário são pais de Carlos
+   progenitor(helena, carlos).
+   progenitor(mario, carlos).
+
+b) masculino(jose).
+   masculino(joao).
+   masculino(mario).
+   masculino(carlos).
+
+   feminino(maria).
+   feminino(ana).
+   feminine(helena).
+   feminino(joana).
+
+   masculino(jose). masculino(joao). masculino(mario). masculino(carlos).
+   feminino(maria). feminino(ana). feminino(helena). feminino(joana).
+
+   pai(X, Y) :- progenitor(X, Y), masculino(X).
+   mae(X, Y) :- progenitor(X, Y), feminino(X).
+
+   irmao(X, Y) :- progenitor(P, X), progenitor(P, Y), masculino(X), X \= Y.
+   irma(X, Y)  :- progenitor(P, X), progenitor(P, Y), feminino(X), X \= Y.
+
+   avo(X, Y) :- pai(X, P), progenitor(P, Y).
+   tio(X, Y) :- irmao(X, P), progenitor(P, Y).
+
+   primo(X, Y) :- progenitor(P1, X), progenitor(P2, Y), (irmao(P1, P2) ; irma(P1, P2)).
+
+   descendente(X, Y) :- progenitor(Y, X).
+   descendente(X, Y) :- progenitor(Y, Z), descendente(X, Z).
+
+c)1. pai(jose, joao).
+  2. mae(maria, Filhos).
+  3. primo(Primos, mario).
+  4. tio(_, X).
+  5. descendente(carlos, Y)
+  6. irmao(X, helena).
+     irma(X, helena).
+  
+
+
